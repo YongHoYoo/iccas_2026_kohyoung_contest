@@ -4,10 +4,12 @@ import pandas as pd
 
 if __name__ == '__main__': 
 
+    root_folder = 'example_data' 
+
     os.makedirs('csv', exist_ok=True) 
 
-    for folder in os.listdir('data'): 
-            f = os.path.join('data', folder) 
+    for folder in os.listdir(root_folder): 
+            f = os.path.join(root_folder, folder) 
 
             csv_folder = os.path.join('csv', folder)
             os.makedirs(csv_folder, exist_ok=True) 

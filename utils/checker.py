@@ -413,26 +413,24 @@ class Checker:
                     )
                 )
 
-
-
         # FOV trajectory
         size = np.array([10] * len(self.fov)) 
         size[0] = 30 
         showlegend = True 
 
-        for i in range(len(self.fov) -1): 
+        for i in range(len(self.fov)-1): 
             fig.add_trace(
                 go.Scatter(
                     name='FOV', x=list(self.fov.iloc[i:i+2]['x']), y=list(self.fov.iloc[i:i+2]['y']), 
                     mode='lines+markers', 
                     line=dict(color='rgb(37, 37, 37)'), 
                     marker=dict(size=[size[i], 10]), 
-                    legendgroup='FOV', 
-                    showlegend=showlegend
+                    legendgroup=f'FOV_{i+1}', 
+                    showlegend=False
                 )
             )
-            showlegend = False 
 
+        
 
         fig.update_layout(
             plot_bgcolor='#FFFFFF',
@@ -638,7 +636,7 @@ class Checker:
             core_name.append('%d' % j)
 
         plt.title('Timelog (%.2fs)' % max_ct, fontdict={'fontsize': 12}) 
-        plt.xticks(np.arange(0, max_ct + 1.0, 1.0), fontsize=10)
+        plt.xticks(np.arange(0, max_ct + 1.0, max(int(max_ct/10.0), 1.0)), fontsize=10)
         plt.yticks(core_pos, []) #core_name, fontsize=0)
         plt.xlim(-0.1, max_ct + 0.5)
 

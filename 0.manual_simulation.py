@@ -5,6 +5,8 @@ from utils.checker import Checker
 
 if __name__ == '__main__': 
 
+    root_folder = 'manual_data/test' 
+
     # data generation
     g = Generator() 
 
@@ -32,14 +34,14 @@ if __name__ == '__main__':
 
     # add component manually
     # name, tl_x, tl_y, br_x, br_y, types, center, side, board, offset_x, offset_y, time s
-    g.add_component('FID1', 3, 3, 5, 5, 2, 1, 0, 0, 0, 0, 10) 
-    g.add_component('FID2', 25, 15, 27, 17, 2, 1, 0, 0, 0, 0, 10) 
-    g.add_component('COMP1', 4, 14, 14, 16, 0, 0, 0, 0, 0, 0, 50) 
-    g.add_component('COMP2', 20, 9, 22, 14, 0, 0, 0, 0, 0, 0, 40) 
-    g.add_component('COMP3', 20, 5, 22, 7, 0, 0, 0, 0, 0, 0, 20) 
-    g.add_component('COMP4', 23, 5, 25, 7, 0, 0, 0, 0, 0, 0, 20) 
+    g.add_component('FID1', 3, 3, 5, 5, 2, 1, 0, 0, 0, 0, 1) 
+    g.add_component('FID2', 25, 15, 27, 17, 2, 1, 0, 0, 0, 0, 1) 
+    g.add_component('COMP1', 4, 14, 14, 16, 0, 0, 0, 0, 0, 0, 5) 
+    g.add_component('COMP2', 20, 9, 22, 14, 0, 0, 0, 0, 0, 0, 4) 
+    g.add_component('COMP3', 20, 5, 22, 7, 0, 0, 0, 0, 0, 0, 2) 
+    g.add_component('COMP4', 23, 5, 25, 7, 0, 0, 0, 0, 0, 0, 2) 
 
-    g.save_job_info('manual') 
+    g.save_job_info(root_folder) 
 
     # make arbitrary output
     fov_df = pd.DataFrame(columns=['x', 'y', 'comp_idx']) 
@@ -50,10 +52,10 @@ if __name__ == '__main__':
     fov_df.loc[len(fov_df)] = [12, 15, "[2]"]
     fov_df.loc[len(fov_df)] = [6, 15, "[2]"]
 
-    fov_df.to_csv(os.path.join('manual', 'fov.csv')) 
+    fov_df.to_csv(os.path.join(root_folder, 'fov.csv')) 
 
     # result evaluation
-    checker = Checker('manual') 
+    checker = Checker(root_folder) 
     ret = checker.cover_all_components() 
     checker.fov_inspection_order() 
 

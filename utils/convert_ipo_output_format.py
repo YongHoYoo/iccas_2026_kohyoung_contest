@@ -96,6 +96,8 @@ def get_size_rect():
 if __name__ == '__main__': 
 
     csv_folder = 'csv' 
+    root_folder = 'example_data' 
+
     for sub_folder in os.listdir(csv_folder): 
 
         component_file = os.path.join(csv_folder, sub_folder, 'component.csv') 
@@ -109,7 +111,7 @@ if __name__ == '__main__':
         fov_df.drop(['sub_type', 'step', 'big', 'array', 'z', 'array_idx'], axis=1, inplace=True)
 
         fov_df['type'] = fov_df['type'].replace({4: 1, 7: 2})
-        fov_df.to_csv(os.path.join('data', sub_folder, 'fov.csv')) 
+        fov_df.to_csv(os.path.join(root_folder, sub_folder, 'fov.csv')) 
 
 #        size_df = pd.read_csv(size_file) 
 #        fov_center_list, fov_rect_list = get_fov_rect(fov_df, size_df) 

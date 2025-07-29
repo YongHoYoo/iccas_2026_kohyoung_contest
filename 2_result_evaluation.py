@@ -8,10 +8,10 @@ from utils.checker import Checker
 
 if __name__ == "__main__":
 
-    root_folder = 'data' 
+    root_folder = 'example_data' 
 
-    for folder in os.listdir('data'): 
-        data_folder = os.path.join('data', folder) 
+    for folder in os.listdir(root_folder): 
+        data_folder = os.path.join(root_folder, folder) 
         checker = Checker(data_folder) 
         checker.cover_all_components() 
         checker.fov_inspection_order() 
