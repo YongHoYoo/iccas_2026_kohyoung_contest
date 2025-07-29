@@ -1,23 +1,34 @@
 import os
 import json
 import math 
+import logging
 import seaborn as sns
 import numpy as np
 import pandas as pd 
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
-# check if all components are covered
-# - component should be inside of fov
-# - big component 
-# - side cam 
-# center condition 
-# -fov, or other component 
-# check big component condition
 
 class Checker:
     def __init__(self, folder): 
 
         self.folder = folder 
+
+        # log information
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.setLevel(logging.DEBUG)
+
+        formatter = logging.Formatter(f"[{folder}][%(levelname)s] %(message)s")
+
+        file_handler = logging.FileHandler(os.path.join(folder, 'error.log'))
+        file_handler.setFormatter(formatter)
+
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+
+        if not self.logger.handlers:
+            self.logger.addHandler(file_handler)
+            self.logger.addHandler(console_handler)
+
         # check files and load 
         component_file = os.path.join(folder, 'component.csv')
         if not os.path.isfile(component_file): 
@@ -66,7 +77,6 @@ class Checker:
         self.fov['full_br_x'] = self.fov['x'] + self.fov_length / 2 + self.margin_length
         self.fov['full_br_y'] = self.fov['y'] + self.fov_width / 2 + self.margin_width 
 
-
         self.side_fov_length = side_fov_size.iloc[0] 
         self.side_fov_width = side_fov_size.iloc[1] 
 
@@ -93,8 +103,6 @@ class Checker:
                     max_type = max(max_type, self.component.iloc[idx]['type']) 
                     max_board = max(max_board, self.component.iloc[idx]['board']) 
                     max_side = max(max_side, self.component.iloc[idx]['side']) 
-                else: 
-                    print('Not existed component in FOV') 
 
             fov_type.append(max_type) 
             fov_board.append(max_board) 
@@ -202,7 +210,7 @@ class Checker:
             if success: 
                 comp_mask[k] = 1
             else:
-                print(self.component.iloc[k]['name'], 'is out of multiple FOVs') 
+                self.logger.error(f"{self.component.iloc[k]['name']} is out of multiple FOVs.") 
         
         success = True
 
@@ -223,7 +231,7 @@ class Checker:
             for idx in comp_idx: 
 
                 if idx >= len(self.component): 
-                    print(idx, ' is not existed in component list.') 
+                    self.logger.error(f'Component idx {idx} in FOV {i} is not existed.')
                     continue 
 
                 if comp_big_mask[idx] == 1: # already considered
@@ -243,7 +251,7 @@ class Checker:
                         comp_mask[idx] = 1 
                     else: 
                         success = False 
-                        print(self.component.iloc[idx]['name'], ' is not center of FOV.') 
+                        self.logger.error(f"{self.component.iloc[idx]['name']} is not at the center of FOV.")
 
                 else:                
                     margin_x, margin_y = 0, 0 
@@ -257,28 +265,28 @@ class Checker:
                             comp_mask[idx] = 1
                         else: 
                             success = False 
-                            print(self.component.iloc[idx]['name'], ' is out of side FOV.') 
+                            self.logger.error(f"{self.component.iloc[idx]['name']} is out of side FOV.") 
 
                     else: 
                         if (fov_tl_x <= comp_tl_x + margin_x) and (fov_tl_y <= comp_tl_y + margin_y) and (fov_br_x >= comp_br_x - margin_x) and (fov_br_y >= comp_br_y - margin_y): 
                             comp_mask[idx] = 1
                         else: 
                             success = False 
-                            print(self.component.iloc[idx]['name'], ' is out of FOV.') 
+                            self.logger.error(f"{self.component.iloc[idx]['name']} is out of FOV.") 
 
                 
         if sum(comp_mask) != len(self.component): 
             n_violation = len(self.component) - sum(comp_mask) 
             if n_violation > 0: 
-                print(n_violation, ' components is violated the conditions.') 
+                self.logger.error(f"{n_violation} components is violated the conditions.")
                 success = False        
 
         return success 
 
     def fov_inspection_order(self): 
-        success = all(self.fov['type'].iloc[i] > self.fov['type'].iloc[i+1] for i in range(len(self.fov)-1))
+        success = all(self.fov['type'].iloc[i] >= self.fov['type'].iloc[i+1] for i in range(len(self.fov)-1))
         if not success: 
-            print('FOV Inspection order violation.') 
+            self.logger.error('FOV Inspection order violation.') 
         return success
 
 
@@ -546,11 +554,10 @@ class Checker:
         return data
 
     def save_timelog(self): 
-
         self.fov['n_image'] = self.parameter['way'].iloc[0] * self.parameter['channel'].iloc[0]
         self.fov['imaging_time'] = self.parameter['way'].iloc[0] * self.parameter['channel'].iloc[0] / self.parameter['fps'].iloc[0]
-        self.fov['n_image'][:2] = 1 
-        self.fov.loc[self.fov.index[:2], 'imaging_time'] = 0.0 
+        self.fov.loc[self.fov['type']==2, 'n_image'] = 1
+        self.fov.loc[self.fov['type']==2, 'imaging_time'] = 0.0
 
         self.fov['recon_time'] = self.pixel_length * self.pixel_width / 100000000
         self.fov.loc[self.fov.index[:2], 'recon_time'] = 0.0 
@@ -584,7 +591,7 @@ class Checker:
         sns.set()
         fig = plt.figure(figsize=(12, 5)) 
         self.display_timelog(sim_gantt, sim_ct, 'Cycle Time')
-        timelog_file = os.path.join(self.folder, f'cycle_time_{sim_ct}.png') 
+        timelog_file = os.path.join(self.folder, f'timelog.png') 
         plt.savefig(timelog_file, bbox_inches='tight') 
 
         return True 
@@ -613,7 +620,7 @@ class Checker:
             plt.broken_barh(list(zip(start, duration)), (j, 0.8), facecolors='#E26768', linewidth=0.2)
             plt.hlines(j, xmin=0, xmax=max_ct + 0.5, color='tab:gray', linewidth=0.1)
 
-            core_pos.append(0 + j)
+            core_pos.append(j)
             core_name.append('%d' % j)
 
         max_thread = max(result.v_thread)
@@ -624,7 +631,7 @@ class Checker:
 
             plt.broken_barh(list(zip(start, duration)), (j, 0.8), facecolors='#FE9234', linewidth=0.2)
             plt.hlines(j, xmin=0, xmax=max_ct + 0.5, color='tab:gray', linewidth=0.1)
-            core_pos.append(0 + j)
+            core_pos.append(j)
             core_name.append('%d' % j)
 
         plt.title('Timelog (%.2fs)' % max_ct, fontdict={'fontsize': 12}) 
