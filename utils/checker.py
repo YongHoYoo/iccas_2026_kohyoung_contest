@@ -14,12 +14,14 @@ class Checker:
         self.folder = folder 
 
         # log information
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger(f"{self.__class__.__name__}_{folder}")
         self.logger.setLevel(logging.DEBUG)
 
-        formatter = logging.Formatter(f"[{folder}][%(levelname)s] %(message)s")
+        formatter = logging.Formatter(f"[{self.folder}] %(message)s")
 
-        file_handler = logging.FileHandler(os.path.join(folder, 'error.log'))
+        if os.path.exists(os.path.join(self.folder, 'error.log')): 
+            os.remove(os.path.join(self.folder, 'error.log'))
+        file_handler = logging.FileHandler(os.path.join(self.folder, 'error.log'))
         file_handler.setFormatter(formatter)
 
         console_handler = logging.StreamHandler()
@@ -165,6 +167,8 @@ class Checker:
         comp_big_mask = [0] * len(self.component) 
         comp_mask = [0] * len(self.component) 
 
+        error_component_list = [] 
+
         big_comp_idx = dict() 
         for i, comp in self.component.iterrows(): 
                 tl_x = comp['tl_x'] 
@@ -211,6 +215,7 @@ class Checker:
                 comp_mask[k] = 1
             else:
                 self.logger.error(f"{self.component.iloc[k]['name']} is out of multiple FOVs.") 
+                error_component_list.append(self.component.iloc[k]['name'])
         
         success = True
 
@@ -247,11 +252,12 @@ class Checker:
                     offset_x = self.component.iloc[idx]['offset_x']
                     offset_y = self.component.iloc[idx]['offset_y']
 
-                    if fov_tl_x + fov_br_x == comp_tl_x + comp_br_x - offset_x * 2 and fov_tl_y + fov_br_y == comp_tl_y + comp_br_y - offset_y * 2: 
+                    if round(fov_tl_x + fov_br_x, 3) == round(comp_tl_x + comp_br_x - offset_x * 2, 3) and round(fov_tl_y + fov_br_y, 3) == round(comp_tl_y + comp_br_y - offset_y * 2, 3): 
                         comp_mask[idx] = 1 
                     else: 
                         success = False 
                         self.logger.error(f"{self.component.iloc[idx]['name']} is not at the center of FOV.")
+                        error_component_list.append(self.component.iloc[idx]['name'])
 
                 else:                
                     margin_x, margin_y = 0, 0 
@@ -266,6 +272,7 @@ class Checker:
                         else: 
                             success = False 
                             self.logger.error(f"{self.component.iloc[idx]['name']} is out of side FOV.") 
+                            error_component_list.append(self.component.iloc[k]['name'])
 
                     else: 
                         if (fov_tl_x <= comp_tl_x + margin_x) and (fov_tl_y <= comp_tl_y + margin_y) and (fov_br_x >= comp_br_x - margin_x) and (fov_br_y >= comp_br_y - margin_y): 
@@ -273,12 +280,13 @@ class Checker:
                         else: 
                             success = False 
                             self.logger.error(f"{self.component.iloc[idx]['name']} is out of FOV.") 
+                            error_component_list.append(self.component.iloc[k]['name'])
 
                 
         if sum(comp_mask) != len(self.component): 
             n_violation = len(self.component) - sum(comp_mask) 
             if n_violation > 0: 
-                self.logger.error(f"{n_violation} components is violated the conditions.")
+                self.logger.error(f"{n_violation} components (" + ','.join(error_component_list) + ") is violated the conditions.") 
                 success = False        
 
         return success 
@@ -556,11 +564,7 @@ class Checker:
     def save_timelog(self): 
         self.fov['n_image'] = self.parameter['way'].iloc[0] * self.parameter['channel'].iloc[0]
         self.fov['imaging_time'] = self.parameter['way'].iloc[0] * self.parameter['channel'].iloc[0] / self.parameter['fps'].iloc[0]
-        self.fov.loc[self.fov['type']==2, 'n_image'] = 1
-        self.fov.loc[self.fov['type']==2, 'imaging_time'] = 0.0
-
         self.fov['recon_time'] = self.pixel_length * self.pixel_width / 100000000
-        self.fov.loc[self.fov.index[:2], 'recon_time'] = 0.0 
         fov_center = self.fov[['x', 'y']].to_numpy() 
         n_image = self.fov['n_image'].to_numpy() 
 
@@ -595,7 +599,6 @@ class Checker:
         plt.savefig(timelog_file, bbox_inches='tight') 
 
         return True 
-
 
     def display_timelog(self, result, max_ct, title):
 

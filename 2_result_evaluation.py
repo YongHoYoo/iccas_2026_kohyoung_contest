@@ -8,6 +8,8 @@ from utils.checker import Checker
 
 if __name__ == "__main__":
 
+    root_folder = 'data' 
+
     for folder in os.listdir('data'): 
         data_folder = os.path.join('data', folder) 
         checker = Checker(data_folder) 
@@ -15,6 +17,4 @@ if __name__ == "__main__":
         checker.fov_inspection_order() 
         checker.save_pcb_view() 
         checker.save_timelog() 
-#        save_pcb_view(data_folder) 
-#        save_timelog(data_folder) 
 

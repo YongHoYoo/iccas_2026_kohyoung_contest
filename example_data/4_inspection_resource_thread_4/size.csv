@@ -1,0 +1,3 @@
+axis,pcb_size,fov_pixel,scale,margin,side_fov_pixel,side_scale,side_margin
+x,110,3300,10,1,1650.0,10,1
+y,78,2800,10,1,1400.0,10,1

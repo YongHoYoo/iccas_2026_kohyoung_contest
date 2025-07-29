@@ -6,30 +6,29 @@ from utils.generator import Generator
 
 if __name__ == "__main__":
 
+    root_folder = 'simulation_data' 
+
     # the number of pixels
     fov_resolutions = {
-#        '4M' : [2048, 2000], 
-#        '8M': [2844, 2816], 
+        '4M' : [2048, 2000], 
+        '8M': [2844, 2816], 
         '12M': [3072, 4096]
-#        '25M': [5120, 5120]
+        '25M': [5120, 5120]
     }
 
     # um/pixel
-    fov_scale = [10.01] # , 14.85, 19.99]
+    fov_scale = [10.01, 14.85, 19.99]
 
     # way
-    #way = [4, 8] 
-    way = [4] 
+    way = [4, 8]
 
     # channel 
-    #channel = [4, 8] 
-    channel = [4] 
+    channel = [4,8]
 
     # fps 
-    #fps = [30, 60, 90] 
-    fps = [30] 
+    fps = [30, 60, 90]
 
-    for pcb_idx in range(1): 
+    for pcb_idx in range(100): #144 * 10
 
         pcb_size = dict() 
         pcb_size['length'] = random.randint(100, 500) 
@@ -67,5 +66,5 @@ if __name__ == "__main__":
                         for f in fps:
                             g.set_size_info(pcb_size, fov_size) 
                             g.set_parameter(w, c, f) 
-                            folder = f"data/PCB{pcb_idx:04d}_{k}{int(scale)}_W{int(w)}_CH{int(c)}_FPS{f}"
+                            folder = f"{root_folder}/PCB{pcb_idx:04d}_{k}{int(scale)}_W{int(w)}_CH{int(c)}_FPS{f}"
                             g.save_job_info(folder) 
