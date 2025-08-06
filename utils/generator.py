@@ -24,34 +24,27 @@ class Generator():
         r = random.random() ** power
         return round(min_size + (max_size - min_size) * r, 2)
 
-    def set_parameter(self, way, channel, fps, max_thread=None, max_grab=None, v_x=None, v_y=None, a_x=None, a_y=None): 
+    def set_parameter(self, capture_time, recon_time, max_thread=None, max_grab=None): 
         self.parameter = { 
-            'way': way, 
-            'channel': channel, 
-            'fps': fps, 
-            'max_thread': random.randint(8, 24) if max_thread is None else max_thread, 
-            'max_grab': random.randint(30, 100) if max_grab is None else max_grab, 
-            'v_x': random.uniform(500, 1500) if v_x is None else v_x,
-            'v_y': random.uniform(500, 1500) if v_y is None else v_y, 
-            'a_x': random.uniform(3000, 9000) if a_x is None else a_x, 
-            'a_y': random.uniform(3000, 9000) if a_y is None else a_y
+            'capture_time': capture_time, 
+            'recon_time': recon_time, 
+            'max_thread': random.randint(8, 16) if max_thread is None else max_thread, 
+            'max_grab': random.randint(3, 8) if max_grab is None else max_grab, 
+            'v_x': 1000, 
+            'v_y': 1000, 
+            'a_x': 9800, 
+            'a_y': 9800 
         }
 
     def set_size_info(self, pcb_size, fov_size): 
         self.pcb_size = pcb_size 
         self.fov_size = fov_size 
 
-        # set side fov size 
-        self.fov_size['side_pixel_l'] = self.fov_size['pixel_l'] / 2.0 
-        self.fov_size['side_pixel_w'] = self.fov_size['pixel_w'] / 2.0 
-        self.fov_size['side_scale_l'] = self.fov_size['scale_l'] 
-        self.fov_size['side_scale_w'] = self.fov_size['scale_w'] 
-
     def generate_fiducials(self, max_offset=10): 
         # Assume fiducial size is 5 by 5 
         size = 5
-        diagonal_pairs = [("top-left", "bottom-right"), ("top-right", "bottom-left")]
-        selected_pair = random.choice(diagonal_pairs)
+        diagonal_points = ["top-left", "bottom-right", "top-right", "bottom-left"]
+        corner = random.choice(diagonal_points)
 
         corner_base = {
             "top-left": (max_offset, max_offset),
@@ -61,57 +54,27 @@ class Generator():
         }
 
         fiducials = []
-        for corner in selected_pair:
+        while True: 
+            base_x, base_y = corner_base[corner]
+            offset_x = random.randint(-max_offset, max_offset)
+            offset_y = random.randint(-max_offset, max_offset)
+            tl_x = min(max(base_x + offset_x, 0), self.pcb_length - size)
+            tl_y = min(max(base_y + offset_y, 0), self.pcb_width - size)
+            br_x = tl_x + size
+            br_y = tl_y + size
 
-            while True: 
-                base_x, base_y = corner_base[corner]
-                offset_x = random.randint(-max_offset, max_offset)
-                offset_y = random.randint(-max_offset, max_offset)
-                tl_x = min(max(base_x + offset_x, 0), self.pcb_length - size)
-                tl_y = min(max(base_y + offset_y, 0), self.pcb_width - size)
-                br_x = tl_x + size
-                br_y = tl_y + size
-
-                overlap = False 
-                for comp in self.components: 
-                    if not (br_x <= comp[1] or tl_x >= comp[3] or br_y <= comp[2] or tl_y >= comp[4]): 
-                        overlap = True 
-                        break 
-            
-                if not overlap: 
-                    fiducials.append([corner, tl_x, tl_y, br_x, br_y, 2, 1, 0, 0, 0, 0, size*size/100.])
+            overlap = False 
+            for comp in self.components: 
+                if not (br_x <= comp[1] or tl_x >= comp[3] or br_y <= comp[2] or tl_y >= comp[4]): 
+                    overlap = True 
                     break 
+        
+            if not overlap: 
+                fiducials.append([tl_x, tl_y, br_x, br_y, 2, size*size/100.])
+                break 
 
 
         self.components = fiducials + self.components 
-
-    def assign_option(self, n_user_mark=[0, 5], n_side=[0, 10], n_board=[0, 10], n_center=[0, 5]):
-        n_user_mark = min(random.randint(*n_user_mark), len(self.components)) 
-        n_side = min(random.randint(*n_side), len(self.components))
-        n_board = min(random.randint(*n_board), len(self.components))
-        n_center = min(random.randint(*n_center), len(self.components))
-        indices = np.random.permutation(len(self.components))[:n_user_mark + n_side + n_board + n_center]
-
-        # user mark
-        for i in indices[:n_user_mark]: 
-            self.components[i][5] = 1 
-        
-        # side 
-        for i in indices[n_user_mark:n_user_mark+n_side]: 
-            self.components[i][7] = 1
-
-        # board
-        for i in indices[n_user_mark+n_side:n_user_mark+n_side+n_board]: 
-            self.components[i][8] = 1 
-
-        # center 
-        for i in indices[n_user_mark+n_side+n_board:]: 
-            self.components[i][6] = 1
-
-            # offset
-            if random.random() > 0.5: 
-                self.components[i][9] = random.uniform(0, 5) 
-                self.components[i][10] = random.uniform(0, 5) 
 
     def generate_components(self, grid_resolution=10.0, cluster_count=[10,30], n_component_per_cluster=[20,30], cluster_radius=[10.,50.], bernoulli_prob=0.3): 
 
@@ -150,7 +113,7 @@ class Generator():
                 if br_x > self.pcb_length or br_y > self.pcb_width: 
                     continue 
 
-                components.append([random_string(), tl_x, tl_y, br_x, br_y, 0, 0, 0, 0, 0, 0, l*w/100.])
+                components.append([tl_x, tl_y, br_x, br_y, 0, l*w/100.])
 
         # Step 2. Generate clusters near some of the rectangles 
         clustered_components = components.copy() 
@@ -158,7 +121,7 @@ class Generator():
 
         for base in clustered_components[:random.randint(cluster_count[0], cluster_count[1])]: 
 
-            _, base_tl_x, base_tl_y, base_br_x, base_br_y, types, center, side, board, offset_x, offset_y, time = base 
+            base_tl_x, base_tl_y, base_br_x, base_br_y, types, time = base 
             center_x = (base_tl_x + base_br_x) / 2.0 
             center_y = (base_tl_y + base_br_y) / 2.0 
 
@@ -179,7 +142,7 @@ class Generator():
                 if br_x > self.pcb_length or br_y > self.pcb_width: 
                     continue 
 
-                components.append([random_string(), tl_x, tl_y, br_x, br_y, types, 0, 0, 0, 0, 0, l*w/100.]) 
+                components.append([tl_x, tl_y, br_x, br_y, types, l*w/100.]) 
 
         # Step 3. Remove overlaps and limit total count 
         final_components = [] 
@@ -195,8 +158,8 @@ class Generator():
 
         self.components = final_components[:self.n_components] 
 
-    def add_component(self, name, tl_x, tl_y, br_x, br_y, types, center, side, board, offset_x, offset_y, time): 
-        self.components.append([name, tl_x, tl_y, br_x, br_y, types, center, side, board, offset_x, offset_y, time])
+    def add_component(self, tl_x, tl_y, br_x, br_y, types, time): 
+        self.components.append([tl_x, tl_y, br_x, br_y, types, time])
 
     def save_job_info(self, folder): 
 
@@ -205,22 +168,16 @@ class Generator():
         component_file = folder + '/component.csv' 
         with open(component_file, mode='w', newline='') as f: 
             writer = csv.writer(f) 
-            writer.writerow(["", "name", "tl_x", "tl_y", "br_x", "br_y", "type", "center", "side", "board", "offset_x", "offset_y", "time"])
+            writer.writerow(["", "tl_x", "tl_y", "br_x", "br_y", "type", "time"])
             
             for idx, row in enumerate(self.components): 
                 writer.writerow([idx, 
-                                row[0], # name
-                                f"{row[1]:.2f}", #tl_x
-                                f"{row[2]:.2f}", #tl_y
-                                f"{row[3]:.2f}", #br_x
-                                f"{row[4]:.2f}", #br_y
-                                row[5], # type
-                                row[6], # center
-                                row[7], # side
-                                row[8], # board
-                                row[9], # offset_x
-                                row[10],  # offset y
-                                row[11]
+                                f"{row[0]:.2f}", #tl_x
+                                f"{row[1]:.2f}", #tl_y
+                                f"{row[2]:.2f}", #br_x
+                                f"{row[3]:.2f}", #br_y
+                                row[4], # type
+                                row[5]
                                 ] 
                             ) 
 
@@ -228,18 +185,13 @@ class Generator():
         size_file = folder + '/size.csv' 
         with open(size_file, mode='w', newline='') as f: 
             writer = csv.writer(f) 
-            writer.writerow(["axis", "pcb_size", "fov_pixel", "scale", "margin", "side_fov_pixel", "side_scale", "side_margin"]) 
-            writer.writerow(["x", self.pcb_size['length'], 
-                                  self.fov_size['pixel_l'], self.fov_size['scale_l'], self.fov_size['margin'], 
-                                  self.fov_size['side_pixel_l'], self.fov_size['side_scale_l'], self.fov_size['margin']])
-
-            writer.writerow(["y", self.pcb_size['width'], 
-                                  self.fov_size['pixel_w'], self.fov_size['scale_w'], self.fov_size['margin'], 
-                                  self.fov_size['side_pixel_w'], self.fov_size['side_scale_w'], self.fov_size['margin']])
+            writer.writerow(["axis", "pcb_size", "fov_size"]) 
+            writer.writerow(["x", self.pcb_size['length'], self.fov_size]) 
+            writer.writerow(["y", self.pcb_size['width'], self.fov_size])
         
         # parameter info
         param_file = folder + '/parameter.csv' 
         with open(param_file, mode='w', newline='') as f: 
             writer = csv.writer(f) 
-            writer.writerow(["way", "channel", "fps", "max_thread", "max_grab", "v_x", "v_y", "a_x", "a_y"]) 
-            writer.writerow([self.parameter['way'], self.parameter['channel'], self.parameter['fps'], self.parameter['max_thread'], self.parameter['max_grab'], self.parameter['v_x'], self.parameter['v_y'], self.parameter['a_x'], self.parameter['a_y']])
+            writer.writerow(["capture_time", "recon_time", "max_thread", "max_grab", "v_x", "v_y", "a_x", "a_y"]) 
+            writer.writerow([self.parameter['capture_time'], self.parameter['recon_time'], self.parameter['max_thread'], self.parameter['max_grab'], self.parameter['v_x'], self.parameter['v_y'], self.parameter['a_x'], self.parameter['a_y']])

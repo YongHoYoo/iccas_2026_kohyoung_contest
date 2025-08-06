@@ -8,7 +8,7 @@ from utils.checker import Checker
 
 if __name__ == "__main__":
 
-    root_folder = 'example_data' 
+    root_folder = 'simulation_data' 
 
     for folder in os.listdir(root_folder): 
         data_folder = os.path.join(root_folder, folder) 

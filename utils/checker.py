@@ -55,18 +55,11 @@ class Checker:
         self.pcb_length = size['pcb_size'].iloc[0] 
         self.pcb_width = size['pcb_size'].iloc[1] 
 
-        self.pixel_length = size['fov_pixel'].iloc[0] 
-        self.pixel_width = size['fov_pixel'].iloc[1] 
-
-        self.margin_length = size['margin'].iloc[0] / 2.0
-        self.margin_width = size['margin'].iloc[1] / 2.0
-
-        fov_size = size['fov_pixel'] * size['scale'] / 1000 
-        side_fov_size = size['side_fov_pixel'] * size['side_scale'] / 1000 
+        fov_size = size['fov_size'] 
+        self.fov_length = fov_size.iloc[0]
+        self.fov_width = fov_size.iloc[1]
 
         self.fov = pd.read_csv(fov_file) 
-        self.fov_length = fov_size.iloc[0] - 2 * self.margin_length
-        self.fov_width = fov_size.iloc[1] - 2 * self.margin_width 
 
         # get fov rect 
         self.fov['tl_x'] = self.fov['x'] - self.fov_length / 2
@@ -74,45 +67,18 @@ class Checker:
         self.fov['br_x'] = self.fov['x'] + self.fov_length / 2
         self.fov['br_y'] = self.fov['y'] + self.fov_width / 2
 
-        self.fov['full_tl_x'] = self.fov['x'] - self.fov_length / 2 - self.margin_length
-        self.fov['full_tl_y'] = self.fov['y'] - self.fov_width / 2 - self.margin_width
-        self.fov['full_br_x'] = self.fov['x'] + self.fov_length / 2 + self.margin_length
-        self.fov['full_br_y'] = self.fov['y'] + self.fov_width / 2 + self.margin_width 
-
-        self.side_fov_length = side_fov_size.iloc[0] 
-        self.side_fov_width = side_fov_size.iloc[1] 
-
-         # get side fov rect 
-        self.fov['side_tl_x'] = self.fov['x'] - self.side_fov_length / 2
-        self.fov['side_tl_y'] = self.fov['y'] - self.side_fov_width / 2
-        self.fov['side_br_x'] = self.fov['x'] + self.side_fov_length / 2
-        self.fov['side_br_y'] = self.fov['y'] + self.side_fov_width / 2
-
-        self.fov['full_side_tl_x'] = self.fov['x'] - self.side_fov_length / 2 - self.margin_length
-        self.fov['full_side_tl_y'] = self.fov['y'] - self.side_fov_width / 2 - self.margin_width
-        self.fov['full_side_br_x'] = self.fov['x'] + self.side_fov_length / 2 + self.margin_length
-        self.fov['full_side_br_y'] = self.fov['y'] + self.side_fov_width / 2 + self.margin_width 
-
         # update fov type 
-        fov_type, fov_board, fov_side = [], [], []
+        fov_type = [] 
         for i, fov in self.fov.iterrows(): 
             comp_idx = json.loads(self.fov.iloc[i]['comp_idx'])
             max_type = 0 
-            max_board = 0 
-            max_side = 0 
             for idx in comp_idx: 
                 if idx < len(self.component):
                     max_type = max(max_type, self.component.iloc[idx]['type']) 
-                    max_board = max(max_board, self.component.iloc[idx]['board']) 
-                    max_side = max(max_side, self.component.iloc[idx]['side']) 
 
             fov_type.append(max_type) 
-            fov_board.append(max_board) 
-            fov_side.append(max_side) 
 
         self.fov['type'] = fov_type 
-        self.fov['board'] = fov_board
-        self.fov['side'] = fov_side
 
     def is_target_fully_covered(self, rects, target):
         tx1, ty1, tx2, ty2 = target
@@ -178,19 +144,12 @@ class Checker:
 
                 n_length, n_width = 1, 1
 
-                if comp['side'] == 0: 
-                    if (br_x - tl_x) > self.fov_length:
-                        n_length = math.ceil((br_x - tl_x) / self.fov_length)
+                if (br_x - tl_x) > self.fov_length:
+                    n_length = math.ceil((br_x - tl_x) / self.fov_length)
 
-                    if (br_y - tl_y) > self.fov_width: 
-                        n_width = math.ceil((br_y - tl_y) / self.fov_width)
+                if (br_y - tl_y) > self.fov_width: 
+                    n_width = math.ceil((br_y - tl_y) / self.fov_width)
 
-                else: 
-                    if (br_x - tl_x) > self.side_fov_length:
-                        n_length = math.ceil((br_x - tl_x) / self.side_fov_length)
-
-                    if (br_y - tl_y) > self.side_fov_width: 
-                        n_width = math.ceil((br_y - tl_y) / self.side_fov_width)
 
 
                 if n_length > 1 or n_width > 1: 
@@ -201,10 +160,7 @@ class Checker:
             comp_idx = json.loads(fov['comp_idx'])
             for idx in comp_idx: 
                 if idx in list(big_comp_idx.keys()): 
-                    if self.component.iloc[idx]['side'] == 1: 
-                        fov_rect = tuple(self.fov[['side_tl_x', 'side_tl_y', 'side_br_x', 'side_br_y']].iloc[i])
-                    else: 
-                        fov_rect = tuple(self.fov[['tl_x', 'tl_y', 'br_x', 'br_y']].iloc[i])
+                    fov_rect = tuple(self.fov[['tl_x', 'tl_y', 'br_x', 'br_y']].iloc[i])
                     big_comp_idx[idx].append(fov_rect) 
 
         for k, v in big_comp_idx.items(): 
@@ -226,11 +182,6 @@ class Checker:
             fov_br_x = fov['br_x'] 
             fov_br_y = fov['br_y'] 
 
-            side_fov_tl_x = fov['side_tl_x'] 
-            side_fov_tl_y = fov['side_tl_y']
-            side_fov_br_x = fov['side_br_x'] 
-            side_fov_br_y = fov['side_br_y'] 
-
             comp_idx = json.loads(fov['comp_idx'])
             
             for idx in comp_idx: 
@@ -247,40 +198,12 @@ class Checker:
                 comp_br_x = self.component.iloc[idx]['br_x'] 
                 comp_br_y = self.component.iloc[idx]['br_y'] 
 
-                if self.component.iloc[idx]['center'] == 1: 
-                    # offset 
-                    offset_x = self.component.iloc[idx]['offset_x']
-                    offset_y = self.component.iloc[idx]['offset_y']
-
-                    if round(fov_tl_x + fov_br_x, 3) == round(comp_tl_x + comp_br_x - offset_x * 2, 3) and round(fov_tl_y + fov_br_y, 3) == round(comp_tl_y + comp_br_y - offset_y * 2, 3): 
-                        comp_mask[idx] = 1 
-                    else: 
-                        success = False 
-                        self.logger.error(f"{self.component.iloc[idx]['name']} is not at the center of FOV.")
-                        error_component_list.append(self.component.iloc[idx]['name'])
-
-                else:                
-                    margin_x, margin_y = 0, 0 
-                    if self.component.iloc[idx]['board'] == 1: 
-                        margin_x = self.margin_length 
-                        margin_y = self.margin_width 
-
-                    if self.component.iloc[idx]['side'] == 1: 
-
-                        if (side_fov_tl_x <= comp_tl_x + margin_x) and (side_fov_tl_y <= comp_tl_y + margin_y) and (side_fov_br_x >= comp_br_x - margin_x) and (side_fov_br_y >= comp_br_y - margin_y): 
-                            comp_mask[idx] = 1
-                        else: 
-                            success = False 
-                            self.logger.error(f"{self.component.iloc[idx]['name']} is out of side FOV.") 
-                            error_component_list.append(self.component.iloc[k]['name'])
-
-                    else: 
-                        if (fov_tl_x <= comp_tl_x + margin_x) and (fov_tl_y <= comp_tl_y + margin_y) and (fov_br_x >= comp_br_x - margin_x) and (fov_br_y >= comp_br_y - margin_y): 
-                            comp_mask[idx] = 1
-                        else: 
-                            success = False 
-                            self.logger.error(f"{self.component.iloc[idx]['name']} is out of FOV.") 
-                            error_component_list.append(self.component.iloc[k]['name'])
+                if fov_tl_x <= comp_tl_x and fov_tl_y <= comp_tl_y and fov_br_x >= comp_br_x and fov_br_y >= comp_br_y:
+                    comp_mask[idx] = 1
+                else: 
+                    success = False 
+                    self.logger.error(f"{self.component.iloc[idx]['name']} is out of FOV.") 
+                    error_component_list.append(self.component.iloc[k]['name'])
 
                 
         if sum(comp_mask) != len(self.component): 
@@ -330,8 +253,7 @@ class Checker:
         )
 
         # 3. Draw output
-        fov_rect_list, side_fov_rect_list = self.get_fov_rect(margin=False) 
-        full_fov_rect_list, full_side_fov_rect_list = self.get_fov_rect(margin=True) 
+        fov_rect_list = self.get_fov_rect() 
 
         for i in range(len(fov_rect_list)): 
 
@@ -352,66 +274,20 @@ class Checker:
                         showlegend=False
                     )
                 )
-
-
             fig.add_trace(
                 go.Scatter(
                     name = f'FOV_{i}', 
                     x=fov_rect_list[i]['x'], 
                     y=fov_rect_list[i]['y'], 
-                    mode='lines', 
-                    line = dict(color = '#000000', width=1), 
-                    marker = dict(opacity=0), 
-                    opacity=0.3, 
-                    legendgroup = f'FOV_{i}', 
-                    showlegend=False
-                )
-            )
-
-            fig.add_trace(
-                go.Scatter(
-                    name = f'FOV_{i}', 
-                    x=full_fov_rect_list[i]['x'], 
-                    y=full_fov_rect_list[i]['y'], 
-                    line = dict(width=0), 
+                    line = dict(color='#000000', width=1), 
                     fill='toself', 
                     fillcolor=fov_rect_list[i]['color'], 
                     opacity=0.3,
                     marker = dict(opacity=0), 
                     legendgroup = f'FOV_{i}', 
-                    showlegend=True if side_fov_rect_list[i] is None else False
+                    showlegend=True
                 )
             )
-
-            if side_fov_rect_list[i] is not None: 
-                fig.add_trace(
-                    go.Scatter(
-                        name = f'FOV_{i}', 
-                        x=side_fov_rect_list[i]['x'], 
-                        y=side_fov_rect_list[i]['y'], 
-                        mode='lines', 
-                        line = dict(color = '#000000', width=1), 
-                        opacity=0.3,
-                        marker = dict(opacity=0), 
-                        legendgroup = f'FOV_{i}', 
-                        showlegend=False
-                    )
-                )
-
-                fig.add_trace(
-                    go.Scatter(
-                        name = f'FOV_{i}', 
-                        x=full_side_fov_rect_list[i]['x'], 
-                        y=full_side_fov_rect_list[i]['y'], 
-                        line = dict(width=0), 
-                        fill='toself', 
-                        fillcolor=side_fov_rect_list[i]['color'], 
-                        opacity=0.3,
-                        marker = dict(opacity=0), 
-                        legendgroup = f'FOV_{i}', 
-                        showlegend=True
-                    )
-                )
 
         # FOV trajectory
         size = np.array([10] * len(self.fov)) 
@@ -425,10 +301,12 @@ class Checker:
                     mode='lines+markers', 
                     line=dict(color='rgb(37, 37, 37)'), 
                     marker=dict(size=[size[i], 10]), 
-                    legendgroup=f'FOV_{i+1}', 
-                    showlegend=False
+                    legendgroup=f'FOV', 
+                    showlegend=showlegend
                 )
             )
+
+            showlegend = False 
 
         
 
@@ -442,23 +320,16 @@ class Checker:
 
         fig.write_html(os.path.join(self.folder, 'result.html'))
 
-    def get_fov_rect(self, margin=False): 
+    def get_fov_rect(self): 
 
         fov_rect_list = [] 
-        fov_side_rect_list = [] 
 
         for i, row in self.fov.iterrows(): 
 
-            if margin: 
-                x1 = self.fov.iloc[i]['full_tl_x']
-                y1 = self.fov.iloc[i]['full_tl_y'] 
-                x2 = self.fov.iloc[i]['full_br_x']
-                y2 = self.fov.iloc[i]['full_br_y'] 
-            else: 
-                x1 = self.fov.iloc[i]['tl_x']
-                y1 = self.fov.iloc[i]['tl_y'] 
-                x2 = self.fov.iloc[i]['br_x']
-                y2 = self.fov.iloc[i]['br_y'] 
+            x1 = self.fov.iloc[i]['tl_x']
+            y1 = self.fov.iloc[i]['tl_y'] 
+            x2 = self.fov.iloc[i]['br_x']
+            y2 = self.fov.iloc[i]['br_y'] 
 
 
             x = [x1, x1, x2, x2, x1] 
@@ -466,51 +337,19 @@ class Checker:
 
             if row['type'] == 2: 
                 color = 'rgb(0, 153, 25)' 
-            elif row['type'] == 1: 
-                color = 'rgb(255, 90, 71)'
-            elif row['board'] == 1: 
-                color = 'rgb(255, 240, 100)'
             else: 
                 color = 'rgb(204, 204, 204)'
 
             fov_rect = {'x': x, 'y': y, 'color': color} 
             fov_rect_list.append(fov_rect) 
 
-            # side 
-            if row['side'] == 1: 
-                color = 'rgb(102, 102, 255)'
-
-                if margin: 
-                    x1 = self.fov.iloc[i]['full_side_tl_x']
-                    y1 = self.fov.iloc[i]['full_side_tl_y'] 
-                    x2 = self.fov.iloc[i]['full_side_br_x']
-                    y2 = self.fov.iloc[i]['full_side_br_y'] 
-                else: 
-                    x1 = self.fov.iloc[i]['side_tl_x']
-                    y1 = self.fov.iloc[i]['side_tl_y'] 
-                    x2 = self.fov.iloc[i]['side_br_x']
-                    y2 = self.fov.iloc[i]['side_br_y'] 
-
-
-                x = [x1, x1, x2, x2, x1] 
-                y = [y1, y2, y2, y1, y1] 
-
-                fov_side_rect = {'x': x, 'y': y, 'color': color} 
-            else: 
-                fov_side_rect = None 
-
-            fov_side_rect_list.append(fov_side_rect) 
-
-        return fov_rect_list, fov_side_rect_list 
+        return fov_rect_list
 
 
     def get_component_rect(self, df): 
 
         normal_df = df[df['type'] == 0]
-        usermark_df = df[df['type'] == 1] 
         fiducial_df = df[df['type'] == 2] 
-        side_df = df[df['side'] == 1] 
-        board_df = df[df['board'] == 1] 
 
         data = dict() 
         data['normal'] = {
@@ -519,28 +358,10 @@ class Checker:
             'fov_color': 'rgb(130, 130, 130)'
         }
 
-        data['usermark'] = { 
-            'data': usermark_df, 
-            'color': 'rgb(255, 99, 71)', 
-            'fov_color': 'rgb(200, 60, 40)'
-        }
-
         data['fiducial'] = { 
             'data': fiducial_df, 
             'color': 'rgb(0, 153, 25)', 
             'fov_color': 'rgb(0, 110, 10)'
-        }
-
-        data['side'] = { 
-            'data': side_df, 
-            'color': 'rgb(102, 102, 255)', 
-            'fov_color': 'rgb(80, 80, 200)'
-        }
-
-        data['board'] = { 
-            'data': board_df, 
-            'color': 'rgb(255, 230, 23)', 
-            'fov_color': 'rgb(255, 216, 0)'
         }
 
         for option in data.keys(): 
@@ -560,11 +381,9 @@ class Checker:
         return data
 
     def save_timelog(self): 
-        self.fov['n_image'] = self.parameter['way'].iloc[0] * self.parameter['channel'].iloc[0]
-        self.fov['imaging_time'] = self.parameter['way'].iloc[0] * self.parameter['channel'].iloc[0] / self.parameter['fps'].iloc[0]
-        self.fov['recon_time'] = self.pixel_length * self.pixel_width / 100000000
+        self.fov['imaging_time'] = self.parameter['capture_time'].iloc[0] 
+        self.fov['recon_time'] = self.parameter['recon_time'].iloc[0] 
         fov_center = self.fov[['x', 'y']].to_numpy() 
-        n_image = self.fov['n_image'].to_numpy() 
 
         t_imaging = self.fov['imaging_time'].to_numpy()
         t_recon = self.fov['recon_time'].to_numpy()
@@ -583,7 +402,6 @@ class Checker:
 
         _, sim_ct, sim_gantt = self.get_real_cost(params,
                                                   fov_center, 
-                                                  n_image, 
                                                   t_imaging, 
                                                   t_recon, 
                                                   t_comps, 
@@ -595,6 +413,7 @@ class Checker:
         self.display_timelog(sim_gantt, sim_ct, 'Cycle Time')
         timelog_file = os.path.join(self.folder, f'timelog.png') 
         plt.savefig(timelog_file, bbox_inches='tight') 
+        plt.close() 
 
         return True 
 
@@ -640,7 +459,7 @@ class Checker:
         plt.yticks(core_pos, []) #core_name, fontsize=0)
         plt.xlim(-0.1, max_ct + 0.5)
 
-    def get_real_cost(self, param, point, n_img, t_img, t_fov, t_comp, max_grabs, max_thread): 
+    def get_real_cost(self, param, point, t_img, t_fov, t_comp, max_grabs, max_thread): 
 
         # total distance
         dist = np.sum(np.sqrt(np.sum((point[1:] - point[:-1])**2, axis=1)))
@@ -732,8 +551,8 @@ class Checker:
 
             # imaging time
             t_check[:] = np.maximum(t_check, t_last[0]) 
-            max_fovs = max_grabs // n_img[i] 
-            current_grab = (t_check > t_last[0]).astype(int) * n_img[i]
+            max_fovs = max_grabs
+            current_grab = (t_check > t_last[0]).astype(int)
             if current_grab.sum() >= max_grabs: 
                 t_img_start = np.sort(t_check)[-max_fovs] 
             else:

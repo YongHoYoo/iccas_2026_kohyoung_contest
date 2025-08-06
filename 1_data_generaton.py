@@ -7,28 +7,9 @@ from utils.generator import Generator
 if __name__ == "__main__":
 
     root_folder = 'simulation_data' 
+    fov_size = [40, 50, 60] 
 
-    # the number of pixels
-    fov_resolutions = {
-        '4M' : [2048, 2000], 
-        '8M': [2844, 2816], 
-        '12M': [3072, 4096]
-        '25M': [5120, 5120]
-    }
-
-    # um/pixel
-    fov_scale = [10.01, 14.85, 19.99]
-
-    # way
-    way = [4, 8]
-
-    # channel 
-    channel = [4,8]
-
-    # fps 
-    fps = [30, 60, 90]
-
-    for pcb_idx in range(100): #144 * 10
+    for pcb_idx in range(10): #144 * 10
 
         pcb_size = dict() 
         pcb_size['length'] = random.randint(100, 500) 
@@ -46,25 +27,10 @@ if __name__ == "__main__":
         g = Generator() 
         g.initialize(pcb_size, n_components, component_info, big_component_info)
         g.generate_components()
-        g.assign_option() 
         g.generate_fiducials() 
 
-        for k, v in fov_resolutions.items(): 
-            for scale in fov_scale: 
-                margin = random.uniform(1, 3)      # mm
-
-                fov_size = { 
-                    'pixel_l': v[0],               # pixel
-                    'pixel_w': v[1],               # pixel
-                    'scale_l': scale,              # um/pixel
-                    'scale_w': scale,              # um/pixel
-                    'margin': random.uniform(1, 3) # mm
-                }
-
-                for w in way: 
-                    for c in channel: 
-                        for f in fps:
-                            g.set_size_info(pcb_size, fov_size) 
-                            g.set_parameter(w, c, f) 
-                            folder = f"{root_folder}/PCB{pcb_idx:04d}_{k}{int(scale)}_W{int(w)}_CH{int(c)}_FPS{f}"
-                            g.save_job_info(folder) 
+        for fov in fov_size: 
+            g.set_size_info(pcb_size, fov) 
+            g.set_parameter(capture_time=fov/100, recon_time=fov/100) 
+            folder = f"{root_folder}/PCB{pcb_idx:04d}_{fov}um" 
+            g.save_job_info(folder) 
