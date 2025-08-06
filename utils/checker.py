@@ -170,8 +170,8 @@ class Checker:
             if success: 
                 comp_mask[k] = 1
             else:
-                self.logger.error(f"{self.component.iloc[k]['name']} is out of multiple FOVs.") 
-                error_component_list.append(self.component.iloc[k]['name'])
+                self.logger.error(f"{k} is out of multiple FOVs.") 
+                error_component_list.append(str(k)) 
         
         success = True
 
@@ -202,8 +202,8 @@ class Checker:
                     comp_mask[idx] = 1
                 else: 
                     success = False 
-                    self.logger.error(f"{self.component.iloc[idx]['name']} is out of FOV.") 
-                    error_component_list.append(self.component.iloc[k]['name'])
+                    self.logger.error(f"{idx} is out of FOV.") 
+                    error_component_list.append(str(idx))
 
                 
         if sum(comp_mask) != len(self.component): 

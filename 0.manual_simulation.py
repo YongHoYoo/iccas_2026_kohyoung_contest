@@ -15,34 +15,23 @@ if __name__ == '__main__':
             'length': 30, 
             'width': 20
         },
-        fov_size={
-            'pixel_l': 800, 
-            'pixel_w': 800, 
-            'scale_l': 10, 
-            'scale_w': 10, 
-            'margin': 1
-        }
+        fov_size=8
     )
-
-    g.set_parameter(way=4, 
-                    channel=4, 
-                    fps=30, 
-                    v_x=100, 
-                    v_y=100, 
-                    a_x=3000, 
-                    a_y=3000)
+    g.set_parameter(capture_time=0.5, recon_time=0.5) 
 
     # add component manually
-    # name, tl_x, tl_y, br_x, br_y, types, center, side, board, offset_x, offset_y, time s
-    g.add_component('FID1', 3, 3, 5, 5, 2, 1, 0, 0, 0, 0, 1) 
-    g.add_component('FID2', 25, 15, 27, 17, 2, 1, 0, 0, 0, 0, 1) 
-    g.add_component('COMP1', 4, 14, 14, 16, 0, 0, 0, 0, 0, 0, 5) 
-    g.add_component('COMP2', 20, 9, 22, 14, 0, 0, 0, 0, 0, 0, 4) 
-    g.add_component('COMP3', 20, 5, 22, 7, 0, 0, 0, 0, 0, 0, 2) 
-    g.add_component('COMP4', 23, 5, 25, 7, 0, 0, 0, 0, 0, 0, 2) 
+    # name, tl_x, tl_y, br_x, br_y, types, center, time s
+    g.add_component(3, 3, 5, 5, 2, 1) # start point
+    g.add_component(25, 15, 27, 17, 0, 1) 
+    g.add_component(4, 14, 14, 16, 0, 5) 
+    g.add_component(20, 9, 22, 14, 0, 4) 
+    g.add_component(20, 5, 22, 7, 0, 2) 
+    g.add_component(23, 5, 25, 7, 0, 2) 
 
     g.save_job_info(root_folder) 
 
+
+#            g.set_parameter(capture_time=fov/100, recon_time=fov/100) 
     # make arbitrary output
     fov_df = pd.DataFrame(columns=['x', 'y', 'comp_idx']) 
     fov_df.loc[len(fov_df)] = [4, 4, "[0]"]

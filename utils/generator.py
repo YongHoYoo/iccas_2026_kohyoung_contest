@@ -150,7 +150,7 @@ class Generator():
         idx = index.Index() 
 
         for i, c in enumerate(components): 
-            tl_x, tl_y, br_x, br_y = c[1], c[2], c[3], c[4]
+            tl_x, tl_y, br_x, br_y = c[0], c[1], c[2], c[3]
             hits = list(idx.intersection((tl_x, tl_y, br_x, br_y))) 
             if not hits: 
                 final_components.append(c) 
