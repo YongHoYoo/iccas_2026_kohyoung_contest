@@ -29,8 +29,8 @@ if __name__ == "__main__":
         g.generate_fiducials() 
 
         for fov in fov_size: 
-            for thread in [8, 16]: 
+            for core in [8, 16]: 
                 g.set_size_info(pcb_size, fov)
-                g.set_parameter(capture_time=fov/100, recon_time=fov/100, max_thread=thread) 
-                folder = f"{root_folder}/PCB{pcb_idx:04d}_{fov}um_thread{thread}" 
+                g.set_parameter(capture_time=fov/100, recon_time=fov/100, max_core=core) 
+                folder = f"{root_folder}/PCB{pcb_idx:04d}_{fov}um_thread{core}" 
                 g.save_job_info(folder) 

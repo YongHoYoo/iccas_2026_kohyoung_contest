@@ -308,8 +308,6 @@ class Checker:
 
             showlegend = False 
 
-        
-
         fig.update_layout(
             plot_bgcolor='#FFFFFF',
             yaxis=dict(scaleanchor="x", scaleratio=1)

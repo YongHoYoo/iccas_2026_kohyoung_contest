@@ -7,10 +7,7 @@ import plotly.graph_objects as go
 def get_component_rect(df): 
 
     normal_df = df[df['type'] == 0]
-    usermark_df = df[df['type'] == 4] 
     fiducial_df = df[df['type'] == 7] 
-    side_df = df[df['side'] == 1] 
-    board_df = df[df['board'] == 1] 
 
     data = dict() 
     data['normal'] = {
@@ -18,26 +15,11 @@ def get_component_rect(df):
         'color' : 'rgb(204, 204, 204)' 
     }
 
-    data['usermark'] = { 
-        'data': usermark_df, 
-        'color': 'rgb(255, 99, 71)'
-    }
-
     data['fiducial'] = { 
         'data': fiducial_df, 
         'color': 'rgb(0, 153, 25)'
     }
-
-    data['side'] = { 
-        'data': side_df, 
-        'color': 'rgb(102, 102, 255)'
-    }
-
-    data['board'] = { 
-        'data': board_df, 
-        'color': 'rgb(26, 230, 230)'
-    }
-
+    
     for option in data.keys(): 
         tl_x = data[option]['data'].tl_x.to_numpy()
         tl_y = data[option]['data'].tl_y.to_numpy()
@@ -90,9 +72,6 @@ def get_fov_rect(df, size_df):
 
     return fov_center_list, fov_rect_list
 
-def get_size_rect(): 
-    pass 
-
 if __name__ == '__main__': 
 
     csv_folder = 'csv' 
@@ -110,6 +89,6 @@ if __name__ == '__main__':
         fov_df = pd.read_csv(fov_file)
         fov_df.drop(['sub_type', 'step', 'big', 'array', 'z', 'array_idx'], axis=1, inplace=True)
 
-        fov_df['type'] = fov_df['type'].replace({4: 1, 7: 2})
+        fov_df['type'] = fov_df['type'].replace({7: 1})
         fov_df.to_csv(os.path.join(root_folder, sub_folder, 'fov.csv')) 
 

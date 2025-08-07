@@ -24,7 +24,7 @@ if __name__ == '__main__':
             component_df['step'] = 1
             component_df['array'] = 0 
             component_df['array_group'] = 1
-            component_df['type'] = component_df['type'].replace({1: 4, 2: 7})
+            component_df['type'] = component_df['type'].replace({1: 7})
             component_df['sub_type'] = 0 
             component_df['center'] = 0 
             component_df['side'] = 0 

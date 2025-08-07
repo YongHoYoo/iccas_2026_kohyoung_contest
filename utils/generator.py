@@ -20,11 +20,11 @@ class Generator():
         r = random.random() ** power
         return round(min_size + (max_size - min_size) * r, 2)
 
-    def set_parameter(self, capture_time, recon_time, max_thread): 
+    def set_parameter(self, capture_time, recon_time, max_core): 
         self.parameter = { 
             'capture_time': capture_time, 
             'recon_time': recon_time, 
-            'max_thread': max_thread,
+            'max_core': max_core,
             'v_x': 1000, 
             'v_y': 1000, 
             'a_x': 9800, 
@@ -177,7 +177,7 @@ class Generator():
         # parameter info
         param_file = folder + '/parameter.csv'
         with open(param_file, mode='w', newline='') as f:
-            f.write("capture_time,recon_time,max_thread,v_x,v_y,a_x,a_y\n")
-            f.write(f"{self.parameter['capture_time']},{self.parameter['recon_time']},{self.parameter['max_thread']},"
+            f.write("capture_time,recon_time,max_core,v_x,v_y,a_x,a_y\n")
+            f.write(f"{self.parameter['capture_time']},{self.parameter['recon_time']},{self.parameter['max_core']},"
                     f"{self.parameter['v_x']},{self.parameter['v_y']},{self.parameter['a_x']},{self.parameter['a_y']}\n")
         
