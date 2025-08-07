@@ -12,16 +12,16 @@ if __name__ == '__main__':
 
     g.set_size_info( 
         pcb_size={ 
-            'length': 30, 
-            'width': 20
+            'width': 30, 
+            'height': 20
         },
         fov_size=8
     )
-    g.set_parameter(capture_time=0.5, recon_time=0.5) 
+    g.set_parameter(capture_time=0.5, recon_time=0.5, max_core=8) 
 
     # add component manually
     # name, tl_x, tl_y, br_x, br_y, types, center, time s
-    g.add_component(3, 3, 5, 5, 2, 1) # start point
+    g.add_component(3, 3, 5, 5, 1, 1) # start point
     g.add_component(25, 15, 27, 17, 0, 1) 
     g.add_component(4, 14, 14, 16, 0, 5) 
     g.add_component(20, 9, 22, 14, 0, 4) 
@@ -30,8 +30,6 @@ if __name__ == '__main__':
 
     g.save_job_info(root_folder) 
 
-
-#            g.set_parameter(capture_time=fov/100, recon_time=fov/100) 
     # make arbitrary output
     fov_df = pd.DataFrame(columns=['x', 'y', 'comp_idx']) 
     fov_df.loc[len(fov_df)] = [4, 4, "[0]"]

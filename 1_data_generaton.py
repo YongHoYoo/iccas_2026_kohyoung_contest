@@ -8,6 +8,7 @@ if __name__ == "__main__":
 
     root_folder = 'simulation_data' 
     fov_size = [40, 50, 60] # um
+    max_core = [8, 16] 
 
     for pcb_idx in range(10): 
 
@@ -29,7 +30,7 @@ if __name__ == "__main__":
         g.generate_fiducials() 
 
         for fov in fov_size: 
-            for core in [8, 16]: 
+            for core in max_core: 
                 g.set_size_info(pcb_size, fov)
                 g.set_parameter(capture_time=fov/100, recon_time=fov/100, max_core=core) 
                 folder = f"{root_folder}/PCB{pcb_idx:04d}_{fov}um_thread{core}" 

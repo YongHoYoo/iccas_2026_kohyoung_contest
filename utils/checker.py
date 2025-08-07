@@ -52,20 +52,20 @@ class Checker:
         self.parameter = pd.read_csv(parameter_file) 
         size = pd.read_csv(size_file) 
 
-        self.pcb_length = size['pcb_size'].iloc[0] 
-        self.pcb_width = size['pcb_size'].iloc[1] 
+        self.pcb_width = size['pcb_size'].iloc[0] 
+        self.pcb_height = size['pcb_size'].iloc[1] 
 
         fov_size = size['fov_size'] 
-        self.fov_length = fov_size.iloc[0]
-        self.fov_width = fov_size.iloc[1]
+        self.fov_width = fov_size.iloc[0]
+        self.fov_height = fov_size.iloc[1]
 
         self.fov = pd.read_csv(fov_file) 
 
         # get fov rect 
-        self.fov['tl_x'] = self.fov['x'] - self.fov_length / 2
-        self.fov['tl_y'] = self.fov['y'] - self.fov_width / 2
-        self.fov['br_x'] = self.fov['x'] + self.fov_length / 2
-        self.fov['br_y'] = self.fov['y'] + self.fov_width / 2
+        self.fov['tl_x'] = self.fov['x'] - self.fov_width / 2
+        self.fov['tl_y'] = self.fov['y'] - self.fov_height / 2
+        self.fov['br_x'] = self.fov['x'] + self.fov_width / 2
+        self.fov['br_y'] = self.fov['y'] + self.fov_height / 2
 
         # update fov type 
         fov_type = [] 
@@ -142,17 +142,15 @@ class Checker:
                 br_x = comp['br_x'] 
                 br_y = comp['br_y'] 
 
-                n_length, n_width = 1, 1
+                n_width, n_height = 1, 1
 
-                if (br_x - tl_x) > self.fov_length:
-                    n_length = math.ceil((br_x - tl_x) / self.fov_length)
+                if (br_x - tl_x) > self.fov_width:
+                    n_width = math.ceil((br_x - tl_x) / self.fov_width)
 
-                if (br_y - tl_y) > self.fov_width: 
-                    n_width = math.ceil((br_y - tl_y) / self.fov_width)
+                if (br_y - tl_y) > self.fov_height: 
+                    n_height = math.ceil((br_y - tl_y) / self.fov_height)
 
-
-
-                if n_length > 1 or n_width > 1: 
+                if n_width > 1 or n_height > 1: 
                     comp_big_mask[i] = 1
                     big_comp_idx[i] = [] 
 
@@ -244,8 +242,8 @@ class Checker:
         # 2. Size info
         fig.add_trace(
             go.Scatter(name='PCB', 
-                        x = [0, 0, self.pcb_length, self.pcb_length, 0], 
-                        y = [0, self.pcb_width, self.pcb_width, 0, 0], 
+                        x = [0, 0, self.pcb_width, self.pcb_width, 0], 
+                        y = [0, self.pcb_height, self.pcb_height, 0, 0], 
                        mode='lines',
                        line=dict(color='#303030', width=1),
                        showlegend=False
@@ -313,8 +311,8 @@ class Checker:
             yaxis=dict(scaleanchor="x", scaleratio=1)
         )
 
-        fig.update_xaxes(showgrid=False, zeroline=False, showticklabels=False, range=[0, self.pcb_length])
-        fig.update_yaxes(showgrid=False, zeroline=False, showticklabels=False, range=[self.pcb_width, 0], scaleanchor='x')
+        fig.update_xaxes(showgrid=False, zeroline=False, showticklabels=False, range=[0, self.pcb_width])
+        fig.update_yaxes(showgrid=False, zeroline=False, showticklabels=False, range=[self.pcb_height, 0], scaleanchor='x')
 
         fig.write_html(os.path.join(self.folder, 'result.html'))
 
@@ -333,7 +331,7 @@ class Checker:
             x = [x1, x1, x2, x2, x1] 
             y = [y1, y2, y2, y1, y1] 
 
-            if row['type'] == 2: 
+            if row['type'] == 1: 
                 color = 'rgb(0, 153, 25)' 
             else: 
                 color = 'rgb(204, 204, 204)'
@@ -347,7 +345,7 @@ class Checker:
     def get_component_rect(self, df): 
 
         normal_df = df[df['type'] == 0]
-        fiducial_df = df[df['type'] == 2] 
+        fiducial_df = df[df['type'] == 1] 
 
         data = dict() 
         data['normal'] = {
@@ -395,16 +393,14 @@ class Checker:
             t_comps.append(t_comp) 
 
         params = [self.parameter['v_x'].iloc[0], self.parameter['v_y'].iloc[0], self.parameter['a_x'].iloc[0], self.parameter['a_y'].iloc[0]]
-        max_grabs = self.parameter['max_grab'].iloc[0]
-        max_thread = self.parameter['max_thread'].iloc[0] 
+        max_core = self.parameter['max_core'].iloc[0] 
 
         _, sim_ct, sim_gantt = self.get_real_cost(params,
                                                   fov_center, 
                                                   t_imaging, 
                                                   t_recon, 
                                                   t_comps, 
-                                                  max_grabs=max_grabs, 
-                                                  max_thread=max_thread)
+                                                  max_core=max_core)
 
         sns.set()
         fig = plt.figure(figsize=(12, 5)) 
@@ -421,19 +417,19 @@ class Checker:
         core_name = ['0']
 
         # probe movement
-        start = list(result[(result.v_thread == 0) & (result.v_key==0)].t_start)
-        duration = list(result[(result.v_thread == 0) & (result.v_key==0)].t_duration)
+        start = list(result[(result.v_core == 0) & (result.v_key==0)].t_start)
+        duration = list(result[(result.v_core == 0) & (result.v_key==0)].t_duration)
         plt.broken_barh(list(zip(start, duration)), (0, 0.8), facecolors='#1773B2', linewidth=0.2)
 
         # imaging
-        start = list(result[(result.v_thread == 0) & (result.v_key == 1)].t_start)
-        duration = list(result[(result.v_thread == 0) & (result.v_key == 1)].t_duration)
+        start = list(result[(result.v_core == 0) & (result.v_key == 1)].t_start)
+        duration = list(result[(result.v_core == 0) & (result.v_key == 1)].t_duration)
         plt.broken_barh(list(zip(start, duration)), (0, 0.8), facecolors='#2B9F2A', linewidth=0.2)
         plt.hlines(0, xmin=0, xmax=max_ct + 0.5, color='tab:gray', linewidth=0.1)
 
         for j in range(1, 3):
-            start = list(result[result.v_thread == j].t_start)
-            duration = list(result[result.v_thread == j].t_duration)
+            start = list(result[result.v_core == j].t_start)
+            duration = list(result[result.v_core == j].t_duration)
 
             plt.broken_barh(list(zip(start, duration)), (j, 0.8), facecolors='#E26768', linewidth=0.2)
             plt.hlines(j, xmin=0, xmax=max_ct + 0.5, color='tab:gray', linewidth=0.1)
@@ -441,11 +437,11 @@ class Checker:
             core_pos.append(j)
             core_name.append('%d' % j)
 
-        max_thread = max(result.v_thread)
+        max_core = max(result.v_core)
 
-        for j in range(3, max_thread + 1):
-            start = list(result[result.v_thread == j].t_start)
-            duration = list(result[result.v_thread == j].t_duration)
+        for j in range(3, max_core + 1):
+            start = list(result[result.v_core == j].t_start)
+            duration = list(result[result.v_core == j].t_duration)
 
             plt.broken_barh(list(zip(start, duration)), (j, 0.8), facecolors='#FE9234', linewidth=0.2)
             plt.hlines(j, xmin=0, xmax=max_ct + 0.5, color='tab:gray', linewidth=0.1)
@@ -457,7 +453,7 @@ class Checker:
         plt.yticks(core_pos, []) #core_name, fontsize=0)
         plt.xlim(-0.1, max_ct + 0.5)
 
-    def get_real_cost(self, param, point, t_img, t_fov, t_comp, max_grabs, max_thread): 
+    def get_real_cost(self, param, point, t_img, t_fov, t_comp, max_core): 
 
         # total distance
         dist = np.sum(np.sqrt(np.sum((point[1:] - point[:-1])**2, axis=1)))
@@ -499,18 +495,18 @@ class Checker:
         cost_map = np.maximum(time_x, time_y) 
 
         # first fov's imaging time
-        v_thread = [0]
+        v_core = [0]
         t_start = [0]
         t_duration = [t_img[0].item()]
         v_key = [1]
         v_fov = [0] 
-        t_last = np.repeat(t_img[0:1], max_thread) 
+        t_last = np.repeat(t_img[0:1], max_core) 
 
         # first fov's inspection time
         temp_t_last = np.maximum(t_last, t_last[0])[1:3] 
         current_id = np.argmin(temp_t_last) + 1
 
-        v_thread.append(current_id)
+        v_core.append(current_id)
         t_start.append(t_img[0]) 
         t_duration.append(t_fov[0]) 
         v_key.append(2)
@@ -527,7 +523,7 @@ class Checker:
             temp_t_last  = temp_t_last[3:] 
             current_id = np.argmin(temp_t_last) + 3
 
-            v_thread.append(current_id)
+            v_core.append(current_id)
             start_comp = max(select_t_last, t_last[current_id]) 
             t_start.append(start_comp)
             t_duration.append(each_t[j])
@@ -540,7 +536,7 @@ class Checker:
         for i in range(seqlen - 1):
             # movement
             t_move = cost_map[i, i + 1]
-            v_thread.append(0)
+            v_core.append(0)
             t_start.append(t_last[0]) 
             t_duration.append(t_move) 
             v_key.append(0)
@@ -549,14 +545,9 @@ class Checker:
 
             # imaging time
             t_check[:] = np.maximum(t_check, t_last[0]) 
-            max_fovs = max_grabs
-            current_grab = (t_check > t_last[0]).astype(int)
-            if current_grab.sum() >= max_grabs: 
-                t_img_start = np.sort(t_check)[-max_fovs] 
-            else:
-                t_img_start = t_last[0]
+            t_img_start = t_last[0]
 
-            v_thread.append(0)
+            v_core.append(0)
             t_start.append(t_img_start)
             t_duration.append(t_img[i + 1])
             v_key.append(1)
@@ -568,7 +559,7 @@ class Checker:
             temp_t_last = np.maximum(t_last, t_last[0])[1:3] 
             current_id = np.argmin(temp_t_last) + 1
 
-            v_thread.append(current_id)
+            v_core.append(current_id)
             t_start.append(t_last[current_id])
             t_duration.append(t_fov[i + 1])
             v_key.append(2)
@@ -585,7 +576,7 @@ class Checker:
                 temp_t_last  = temp_t_last[3:] 
                 current_id = np.argmin(temp_t_last) + 3
 
-                v_thread.append(current_id)
+                v_core.append(current_id)
 
                 start_comp = max(select_t_last, t_last[current_id])
                 t_start.append(start_comp)
@@ -598,7 +589,7 @@ class Checker:
         result = {}
         result['t_start'] = t_start
         result['t_duration'] = t_duration
-        result['v_thread'] = v_thread
+        result['v_core'] = v_core
         result['v_key'] = v_key
         result['v_fov'] = v_fov 
 
