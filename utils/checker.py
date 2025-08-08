@@ -427,7 +427,7 @@ class Checker:
         plt.broken_barh(list(zip(start, duration)), (0, 0.8), facecolors='#2B9F2A', linewidth=0.2)
         plt.hlines(0, xmin=0, xmax=max_ct + 0.5, color='tab:gray', linewidth=0.1)
 
-        for j in range(1, 3):
+        for j in range(1, 2):
             start = list(result[result.v_core == j].t_start)
             duration = list(result[result.v_core == j].t_duration)
 
@@ -439,7 +439,7 @@ class Checker:
 
         max_core = max(result.v_core)
 
-        for j in range(3, max_core + 1):
+        for j in range(2, max_core + 1):
             start = list(result[result.v_core == j].t_start)
             duration = list(result[result.v_core == j].t_duration)
 
@@ -453,7 +453,7 @@ class Checker:
         plt.yticks(core_pos, []) #core_name, fontsize=0)
         plt.xlim(-0.1, max_ct + 0.5)
 
-    def get_real_cost(self, param, point, t_img, t_fov, t_comp, max_core): 
+    def get_real_cost(self, param, point, t_img, t_recon, t_comp, max_core): 
 
         # total distance
         dist = np.sum(np.sqrt(np.sum((point[1:] - point[:-1])**2, axis=1)))
@@ -503,15 +503,13 @@ class Checker:
         t_last = np.repeat(t_img[0:1], max_core) 
 
         # first fov's inspection time
-        temp_t_last = np.maximum(t_last, t_last[0])[1:3] 
-        current_id = np.argmin(temp_t_last) + 1
-
+        current_id = 1
         v_core.append(current_id)
         t_start.append(t_img[0]) 
-        t_duration.append(t_fov[0]) 
+        t_duration.append(t_recon[0]) 
         v_key.append(2)
         v_fov.append(0) 
-        t_last[current_id] += t_fov[0]
+        t_last[current_id] += t_recon[0]
 
         # first fov's components inspection time
         select_t_last = t_last[current_id]
@@ -520,8 +518,8 @@ class Checker:
 
         for j in range(len(each_t)):
             temp_t_last = np.maximum(t_last, select_t_last) 
-            temp_t_last  = temp_t_last[3:] 
-            current_id = np.argmin(temp_t_last) + 3
+            temp_t_last  = temp_t_last[2:] 
+            current_id = np.argmin(temp_t_last) + 2
 
             v_core.append(current_id)
             start_comp = max(select_t_last, t_last[current_id]) 
@@ -556,15 +554,15 @@ class Checker:
 
             # fov inspection
             t_last[:] = np.maximum(t_last, t_last[0]) 
-            temp_t_last = np.maximum(t_last, t_last[0])[1:3] 
+            temp_t_last = np.maximum(t_last, t_last[0])[1:2]
             current_id = np.argmin(temp_t_last) + 1
 
             v_core.append(current_id)
             t_start.append(t_last[current_id])
-            t_duration.append(t_fov[i + 1])
+            t_duration.append(t_recon[i + 1])
             v_key.append(2)
             v_fov.append(i+1) 
-            t_last[current_id] += t_fov[i + 1]
+            t_last[current_id] += t_recon[i + 1]
 
             # fov's components inspection time
             select_t_last = t_last[current_id]
@@ -573,8 +571,8 @@ class Checker:
             for j in range(len(each_t)):
 
                 temp_t_last = np.maximum(t_last, select_t_last) 
-                temp_t_last  = temp_t_last[3:] 
-                current_id = np.argmin(temp_t_last) + 3
+                temp_t_last  = temp_t_last[2:] 
+                current_id = np.argmin(temp_t_last) + 2
 
                 v_core.append(current_id)
 

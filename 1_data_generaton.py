@@ -33,5 +33,5 @@ if __name__ == "__main__":
             for core in max_core: 
                 g.set_size_info(pcb_size, fov)
                 g.set_parameter(capture_time=fov/100, recon_time=fov/100, max_core=core) 
-                folder = f"{root_folder}/PCB{pcb_idx:04d}_{fov}um_thread{core}" 
+                folder = f"{root_folder}/PCB{pcb_idx:04d}_{fov}um_{core}_core" 
                 g.save_job_info(folder) 
