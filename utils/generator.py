@@ -159,7 +159,7 @@ class Generator():
     def save_job_info(self, folder): 
         os.makedirs(folder, exist_ok=True) 
         # component info
-        component_file = folder + '/component.csv' 
+        component_file = folder + '/input_component.csv' 
         with open(component_file, mode='w', newline='') as f:
             f.write(",tl_x,tl_y,br_x,br_y,type,time\n")
 
@@ -168,14 +168,14 @@ class Generator():
                 f.write(f"{idx},{row[0]:.2f},{row[1]:.2f},{row[2]:.2f},{row[3]:.2f},{row[4]},{row[5]}\n")
 
         # size info 
-        size_file = folder + '/size.csv'
+        size_file = folder + '/input_size.csv'
         with open(size_file, mode='w', newline='') as f:
             f.write("axis,pcb_size,fov_size\n")
             f.write(f"x,{self.pcb_size['width']},{self.fov_size}\n")
             f.write(f"y,{self.pcb_size['height']},{self.fov_size}\n")
         
         # parameter info
-        param_file = folder + '/parameter.csv'
+        param_file = folder + '/input_parameter.csv'
         with open(param_file, mode='w', newline='') as f:
             f.write("capture_time,recon_time,max_core,v_x,v_y,a_x,a_y\n")
             f.write(f"{self.parameter['capture_time']},{self.parameter['recon_time']},{self.parameter['max_core']},"

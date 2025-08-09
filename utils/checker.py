@@ -32,19 +32,19 @@ class Checker:
             self.logger.addHandler(console_handler)
 
         # check files and load 
-        component_file = os.path.join(folder, 'component.csv')
+        component_file = os.path.join(folder, 'input_component.csv')
         if not os.path.isfile(component_file): 
             assert False, f'No component.csv file at {component_file}'
 
-        size_file = os.path.join(folder, 'size.csv')
+        size_file = os.path.join(folder, 'input_size.csv')
         if not os.path.isfile(size_file): 
             assert False, f'No size.csv file at {size_file}' 
 
-        parameter_file = os.path.join(self.folder, 'parameter.csv') 
+        parameter_file = os.path.join(self.folder, 'input_parameter.csv') 
         if not os.path.isfile(parameter_file): 
             assert False, f'No parameter.csv file at {parameter_file}' 
 
-        fov_file = os.path.join(folder, 'fov.csv') 
+        fov_file = os.path.join(folder, 'output_fov.csv') 
         if not os.path.isfile(fov_file): 
             assert False, f'No fov.csv file at {fov_file}' 
 
@@ -80,7 +80,7 @@ class Checker:
 
         self.fov['type'] = fov_type 
 
-    def is_target_fully_covered(self, rects, target):
+    def is_target_fully_covered(self, rects, target): # rect: fov, target: component
         tx1, ty1, tx2, ty2 = target
 
         # Step 1: Filter rectangles that intersect the target area
@@ -88,7 +88,7 @@ class Checker:
         x_edges = {tx1, tx2}
         y_edges = {ty1, ty2}
 
-        for x1, y1, x2, y2 in rects:
+        for _, x1, y1, x2, y2 in rects:
             # Skip rectangles completely outside the target
             if x2 <= tx1 or x1 >= tx2 or y2 <= ty1 or y1 >= ty2:
                 continue
@@ -129,7 +129,9 @@ class Checker:
 
     def cover_all_components(self): 
 
-        # find big comp
+        self.component['error'] = 0 
+        self.fov['error'] = 0 
+
         comp_big_mask = [0] * len(self.component) 
         comp_mask = [0] * len(self.component) 
 
@@ -158,7 +160,7 @@ class Checker:
             comp_idx = json.loads(fov['comp_idx'])
             for idx in comp_idx: 
                 if idx in list(big_comp_idx.keys()): 
-                    fov_rect = tuple(self.fov[['tl_x', 'tl_y', 'br_x', 'br_y']].iloc[i])
+                    fov_rect = (i,) + tuple(self.fov[['tl_x', 'tl_y', 'br_x', 'br_y']].iloc[i])
                     big_comp_idx[idx].append(fov_rect) 
 
         for k, v in big_comp_idx.items(): 
@@ -169,16 +171,19 @@ class Checker:
                 comp_mask[k] = 1
             else:
                 self.logger.error(f"{k} is out of multiple FOVs.") 
+                self.component.at[k, 'error'] = 1 
+                for v_ in v: 
+                    self.fov.at[v_[0], 'error'] = 1
                 error_component_list.append(str(k)) 
         
         success = True
 
         for i, fov in self.fov.iterrows(): 
 
-            fov_tl_x = fov['tl_x'] 
-            fov_tl_y = fov['tl_y']
-            fov_br_x = fov['br_x'] 
-            fov_br_y = fov['br_y'] 
+            fov_tl_x = fov['tl_x'] - 1e-5
+            fov_tl_y = fov['tl_y'] - 1e-5
+            fov_br_x = fov['br_x'] + 1e-5
+            fov_br_y = fov['br_y'] + 1e-5
 
             comp_idx = json.loads(fov['comp_idx'])
             
@@ -201,6 +206,8 @@ class Checker:
                 else: 
                     success = False 
                     self.logger.error(f"{idx} is out of FOV.") 
+                    self.component.at[idx, 'error'] = 1
+                    self.fov.at[i, 'error'] = 1
                     error_component_list.append(str(idx))
 
                 
@@ -209,6 +216,7 @@ class Checker:
             if n_violation > 0: 
                 self.logger.error(f"{n_violation} components (" + ','.join(error_component_list) + ") is violated the conditions.") 
                 success = False        
+
 
         return success 
 
@@ -225,7 +233,7 @@ class Checker:
 
         component_rect = self.get_component_rect(self.component) 
 
-        for option in component_rect.keys(): 
+        for option in ['component', 'fiducial']: 
             fig.add_trace(
                 go.Scatter(
                     x=component_rect[option]['x'],
@@ -233,7 +241,7 @@ class Checker:
                     fill='toself',
                     line=dict(width=0),
                     fillcolor=component_rect[option]['color'],
-                    name=option, 
+                    name='Component' if 'component' in option else 'Fiducial', 
                     marker=dict(opacity=0),
                     showlegend=True
                 )
@@ -258,14 +266,14 @@ class Checker:
             comp_idx = json.loads(self.fov.iloc[i]['comp_idx'])
             comp_idx = [idx for idx in comp_idx if idx < len(self.component)] 
             component_rect_fov = self.get_component_rect(self.component.iloc[comp_idx])
-            for option in component_rect_fov.keys(): 
+            for option in ['normal_component', 'error_component', 'normal_fiducial', 'error_fiducial']: 
                 fig.add_trace(
                     go.Scatter(
                         x=component_rect_fov[option]['x'],
                         y=component_rect_fov[option]['y'],
                         fill='toself',
                         line=dict(width=0),
-                        fillcolor=component_rect_fov[option]['fov_color'],
+                        fillcolor=component_rect_fov[option]['color'],
                         name=option, 
                         marker=dict(opacity=0),
                         legendgroup=f'FOV_{i}', 
@@ -279,7 +287,7 @@ class Checker:
                     y=fov_rect_list[i]['y'], 
                     line = dict(color='#000000', width=1), 
                     fill='toself', 
-                    fillcolor=fov_rect_list[i]['color'], 
+                    fillcolor=fov_rect_list[i]['color'] if self.fov.iloc[i]['error']==0 else 'rgb(205, 99, 71)', 
                     opacity=0.3,
                     marker = dict(opacity=0), 
                     legendgroup = f'FOV_{i}', 
@@ -306,6 +314,19 @@ class Checker:
 
             showlegend = False 
 
+        fig.add_trace(
+            go.Scatter(
+                name='pos', 
+                x=(self.component['tl_x'] + self.component['br_x'])/2.0, 
+                y=(self.component['tl_y'] + self.component['br_y'])/2.0, 
+                mode='markers', 
+                marker=dict(opacity=0, size=30), 
+                hovertemplate=list(range(len(self.component))), 
+                showlegend=False) 
+        )
+
+
+
         fig.update_layout(
             plot_bgcolor='#FFFFFF',
             yaxis=dict(scaleanchor="x", scaleratio=1)
@@ -327,7 +348,6 @@ class Checker:
             x2 = self.fov.iloc[i]['br_x']
             y2 = self.fov.iloc[i]['br_y'] 
 
-
             x = [x1, x1, x2, x2, x1] 
             y = [y1, y2, y2, y1, y1] 
 
@@ -344,21 +364,27 @@ class Checker:
 
     def get_component_rect(self, df): 
 
-        normal_df = df[df['type'] == 0]
-        fiducial_df = df[df['type'] == 1] 
+        # all components & feedback
+        component_df = df[df['type'] == 0]
+        fiducial_df = df[df['type'] == 1]
+
+        # normal components with no error 
+        normal_component_df = df[(df['type'] == 0) & (df['error'] == 0)]
+        error_component_df = df[(df['type'] == 0) & (df['error'] == 1)]
+
+        # normal components with error
+        normal_fiducial_df = df[(df['type'] == 1) & (df['error'] == 0)] 
+        error_fiducial_df = df[(df['type'] == 1) & (df['error'] == 1)] 
 
         data = dict() 
-        data['normal'] = {
-            'data': normal_df , 
-            'color' : 'rgb(204, 204, 204)', 
-            'fov_color': 'rgb(130, 130, 130)'
-        }
+        data['component'] = {'data': component_df, 'color': 'rgb(204, 204, 204)'}
+        data['fiducial'] = {'data': fiducial_df, 'color': 'rgb(0, 153, 25)'} 
 
-        data['fiducial'] = { 
-            'data': fiducial_df, 
-            'color': 'rgb(0, 153, 25)', 
-            'fov_color': 'rgb(0, 110, 10)'
-        }
+        data['normal_component'] = {'data': normal_component_df, 'color': 'rgb(130, 130, 130)'} 
+        data['error_component'] = {'data': error_component_df, 'color': 'rgb(205, 99, 71)'} 
+
+        data['normal_fiducial'] = {'data': normal_fiducial_df, 'color': 'rgb(0, 110, 10)'} 
+        data['error_fiducial'] = {'data': error_fiducial_df, 'color': 'rgb(205, 99, 71)'}
 
         for option in data.keys(): 
             tl_x = data[option]['data'].tl_x.to_numpy()
@@ -395,12 +421,12 @@ class Checker:
         params = [self.parameter['v_x'].iloc[0], self.parameter['v_y'].iloc[0], self.parameter['a_x'].iloc[0], self.parameter['a_y'].iloc[0]]
         max_core = self.parameter['max_core'].iloc[0] 
 
-        _, sim_ct, sim_gantt = self.get_real_cost(params,
-                                                  fov_center, 
-                                                  t_imaging, 
-                                                  t_recon, 
-                                                  t_comps, 
-                                                  max_core=max_core)
+        sim_ct, sim_gantt = self.get_real_cost(params,
+                                               fov_center, 
+                                               t_imaging, 
+                                               t_recon, 
+                                               t_comps, 
+                                               max_core=max_core)
 
         sns.set()
         fig = plt.figure(figsize=(12, 5)) 
@@ -453,46 +479,33 @@ class Checker:
         plt.yticks(core_pos, []) #core_name, fontsize=0)
         plt.xlim(-0.1, max_ct + 0.5)
 
+    def _compute_axis_time(self, distance, vel, acc):
+        """Compute travel time along a single axis."""
+        th = vel ** 2 / acc
+        mask = (distance >= th).astype(float)
+        over = 2 * vel / acc + (distance - th) / vel
+        under = 2 * np.sqrt(2 * distance / acc)
+        return over * mask + under * (1 - mask)
+
+    def _compute_cost_map(self, point, vel_x, vel_y, acc_x, acc_y):
+        """Compute max-axis travel time between all point pairs."""
+        px = point[:, 0]
+        py = point[:, 1]
+        dist_x = np.abs(px[:, None] - px[None, :])
+        dist_y = np.abs(py[:, None] - py[None, :])
+        time_x = self._compute_axis_time(dist_x, vel_x, acc_x)
+        time_y = self._compute_axis_time(dist_y, vel_y, acc_y)
+        return np.maximum(time_x, time_y)
+
+
     def get_real_cost(self, param, point, t_img, t_recon, t_comp, max_core): 
+
+        vel_x, vel_y, acc_x, acc_y = param
+        seqlen = len(point)
 
         # total distance
         dist = np.sum(np.sqrt(np.sum((point[1:] - point[:-1])**2, axis=1)))
-
-        vel_x, vel_y, acc_x, acc_y = param
-
-        seqlen = len(point)
-
-        t_check = np.zeros((seqlen)) 
-
-        # get costmap
-        point_x = point[:, 0]  # seqlen
-        point_y = point[:, 1]  # seqlen
-
-        point_x_a = np.broadcast_to(point_x[:, None], (seqlen, seqlen)) 
-        point_x_b = np.broadcast_to(point_x[None, :], (seqlen, seqlen)) 
-
-        distance_x = np.abs(point_x_a - point_x_b) 
-        th_x = vel_x ** 2 / acc_x
-
-        mask_x = (distance_x >= th_x).astype(float)
-
-        distance_over_x = 2 * vel_x / acc_x + (distance_x - vel_x ** 2 / acc_x) / vel_x 
-        distance_under_x = 2 * np.sqrt(2 * distance_x / acc_x) 
-
-        time_x = distance_over_x * mask_x + distance_under_x * (1 - mask_x)
-
-        point_y_a = np.broadcast_to(point_y[:, None], (seqlen, seqlen)) 
-        point_y_b = np.broadcast_to(point_y[None, :], (seqlen, seqlen)) 
-
-        distance_y = np.abs(point_y_a - point_y_b)
-        th_y = vel_y ** 2 / acc_y
-        mask_y = (distance_y >= th_y).astype(float) 
-
-        distance_over_y = 2 * vel_y / acc_y + (distance_y - vel_y ** 2 / acc_y) / vel_y
-        distance_under_y = 2 * np.sqrt(2 * distance_y / acc_y)
-
-        time_y = distance_over_y * mask_y + distance_under_y * (1 - mask_y)
-        cost_map = np.maximum(time_x, time_y) 
+        cost_map = self._compute_cost_map(point, vel_x, vel_y, acc_x, acc_y)
 
         # first fov's imaging time
         v_core = [0]
@@ -500,6 +513,7 @@ class Checker:
         t_duration = [t_img[0].item()]
         v_key = [1]
         v_fov = [0] 
+        t_check = np.zeros((seqlen))
         t_last = np.repeat(t_img[0:1], max_core) 
 
         # first fov's inspection time
@@ -593,4 +607,4 @@ class Checker:
 
         result = pd.DataFrame(data=result)
 
-        return dist, max(t_last), result
+        return max(t_last), result

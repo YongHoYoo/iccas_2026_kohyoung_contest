@@ -10,7 +10,7 @@ if __name__ == "__main__":
     fov_size = [40, 50, 60] # um
     max_core = [8, 16] 
 
-    for pcb_idx in range(10): 
+    for pcb_idx in range(100): 
 
         pcb_size = dict() 
         pcb_size['width'] = random.randint(100, 500) # width: y direction

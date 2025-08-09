@@ -17,3 +17,5 @@ if __name__ == "__main__":
         checker.fov_inspection_order() 
         checker.save_pcb_view() 
         checker.save_timelog() 
+
+        

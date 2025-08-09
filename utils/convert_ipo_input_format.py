@@ -14,8 +14,8 @@ if __name__ == '__main__':
             csv_folder = os.path.join('csv', folder)
             os.makedirs(csv_folder, exist_ok=True) 
 
-            component_file = os.path.join(f, 'component.csv') 
-            size_file = os.path.join(f, 'size.csv') 
+            component_file = os.path.join(f, 'input_component.csv') 
+            size_file = os.path.join(f, 'input_size.csv') 
 
             # convert component format 
             component_df = pd.read_csv(component_file)
